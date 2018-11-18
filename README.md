@@ -15,6 +15,7 @@ add
 backup
 clear
 disable
+diff
 enable
 export
 import

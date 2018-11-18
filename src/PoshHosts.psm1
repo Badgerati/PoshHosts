@@ -1,9 +1,29 @@
+<#
+    .SYNOPSIS
+        The hosts commands allows you to control the hosts file
+
+    .DESCRIPTION
+        The hosts commands allows you to control the hosts file, by adding/removing entries; as well enabling/disabling them.
+
+        Hosts also supports profiles, so you can have a developer hosts file in your repo and import/merge it for developers.
+
+        You can also test the entries by pinging them, either using the normal ping or by passing specific ports.
+
+    .EXAMPLE
+        hosts add 127.0.0.3 dev.test.local
+
+    .EXAMPLE
+        hosts export ./local.hosts
+
+    .EXAMPLE
+        hosts test *.local 80, 443
+#>
 function Hosts
 {
     param (
         [Parameter(Position=0, Mandatory=$true)]
-        [ValidateSet('add', 'backup', 'clear', 'disable', 'enable', 'export', 'import',
-            'list', 'merge', 'path', 'remove', 'restore', 'set', 'test')]
+        [ValidateSet('add', 'backup', 'clear', 'diff', 'disable', 'enable', 'export',
+            'import', 'list', 'merge', 'path', 'remove', 'restore', 'set', 'test')]
         [Alias('a')]
         [string]
         $Action, 
@@ -24,7 +44,7 @@ function Hosts
         $HostsPath
     )
 
-    if (@('list', 'path') -inotcontains $Action) {
+    if (@('diff', 'list', 'path', 'test') -inotcontains $Action) {
         Test-AdminUser
     }
 
@@ -75,6 +95,10 @@ function Invoke-HostsAction
             Disable-HostsFileEntries -Values $Value1
         }
 
+        'diff' {
+            Compare-HostsFiles -Path (@($Value1) | Select-Object -First 1)
+        }
+
         'enable' {
             Enable-HostsFileEntries -Values $Value1
         }
@@ -92,7 +116,7 @@ function Invoke-HostsAction
         }
 
         'merge' {
-            Merge-HostsFile -Paths $Value1
+            Merge-HostsFiles -Paths $Value1
         }
 
         'path' {
@@ -112,11 +136,87 @@ function Invoke-HostsAction
         }
 
         'test' {
-            Test-HostsFileEntries -Values $Value1 -Port (@($Value2) | Select-Object -First 1)
+            Test-HostsFileEntries -Values $Value1 -Ports $Value2
         }
     }
 }
 
+
+function Compare-HostsFiles
+{
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $Path
+    )
+
+    # ensure the path exists
+    if (!(Test-Path $Path)) {
+        throw "=> File not found: $($Path)"
+    }
+
+    # get the hosts file
+    $mainInfo = @{}
+    @(Get-HostsFileEntriesByState -HostsMap (@(ConvertFrom-HostsFile)) -State Enabled) | ForEach-Object {
+        if (!$mainInfo.ContainsKey($_.IP)) {
+            $mainInfo[$_.IP] = @()
+        }
+
+        $mainInfo[$_.IP] += $_.Hosts
+    }
+
+    # get the other hosts file
+    $otherInfo = @{}
+    @(Get-HostsFileEntriesByState -HostsMap (@(ConvertFrom-HostsFile -Path $Path)) -State Enabled) | ForEach-Object {
+        if (!$otherInfo.ContainsKey($_.IP)) {
+            $otherInfo[$_.IP] = @()
+        }
+
+        $otherInfo[$_.IP] += $_.Hosts
+    }
+
+    # what would be added?
+    $otherInfo.Keys | ForEach-Object {
+        $_key = $_
+        $_hosts = @()
+
+        if ($mainInfo.ContainsKey($_key)) {
+            $otherInfo[$_key] | ForEach-Object {
+                if ($mainInfo[$_key] -inotcontains $_) {
+                    $_hosts += $_
+                }
+            }
+        }
+        else {
+            $_hosts = @($otherInfo[$_key])
+        }
+
+        if (($_hosts | Measure-Object).Count -gt 0) {
+            Write-Host "+ [$($_key) - $($_hosts -join ' ')]" -ForegroundColor Green
+        }
+    }
+
+    # what would be removed?
+    $mainInfo.Keys | ForEach-Object {
+        $_key = $_
+        $_hosts = @()
+
+        if ($otherInfo.ContainsKey($_key)) {
+            $mainInfo[$_key] | ForEach-Object {
+                if ($otherInfo[$_key] -inotcontains $_) {
+                    $_hosts += $_
+                }
+            }
+        }
+        else {
+            $_hosts = @($mainInfo[$_key])
+        }
+
+        if (($_hosts | Measure-Object).Count -gt 0) {
+            Write-Host "- [$($_key) - $($_hosts -join ' ')]" -ForegroundColor Red
+        }
+    }
+}
 
 function Remove-HostsFileEntries
 {
@@ -207,27 +307,26 @@ function Test-HostsFileEntries
         $Values,
 
         [Parameter()]
-        [string]
-        $Port
+        [string[]]
+        $Ports
     )
 
+    # do we have any ports?
+    $hasPorts = (($Ports | Measure-Object).Count -gt 0)
+
+    # grab all enabled entries in the hosts file for the value passed
     @(Get-HostsFile -Values $Values -State Enabled) | ForEach-Object {
-        $name = ($_.Hosts | Select-Object -First 1)
+        $_ip = $_.IP
+        $_name = ($_.Hosts | Select-Object -First 1)
 
-        if ([string]::IsNullOrWhiteSpace($Port)) {
-            Write-Host "=> Testing $($name)>" -NoNewline
-            $result = Test-NetConnection -ComputerName $_.IP -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        # either ping the host, or test a specific port
+        if (!$hasPorts) {
+            Test-HostsFileEntry -IP $_ip -Hostname $_name
         }
         else {
-            Write-Host "=> Testing $($name):$($Port)>" -NoNewline
-            $result = Test-NetConnection -ComputerName $_.IP -Port $Port -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-        }
-
-        if ($null -eq $result -or (!$result.PingSucceeded -and !$result.TcpTestSucceeded)) {
-            Write-Host "`tFailed" -ForegroundColor Red
-        }
-        else {
-            Write-Host "`tSuccess" -ForegroundColor Green
+            $Ports | ForEach-Object {
+                Test-HostsFileEntry -IP $_ip -Hostname $_name -Port $_
+            }
         }
     }
 }
@@ -315,7 +414,7 @@ function Restore-HostsFile
     Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
 }
 
-function Merge-HostsFile
+function Merge-HostsFiles
 {
     param (
         [Parameter(Mandatory=$true)]
@@ -988,6 +1087,41 @@ function Out-HostsFile
     catch {
         Restore-HostsFile
         throw $_.Exception
+    }
+}
+
+function Test-HostsFileEntry
+{
+    param (
+        [Parameter()]
+        [string]
+        $IP,
+
+        [Parameter()]
+        [string]
+        $Hostname,
+
+        [Parameter()]
+        [string]
+        $Port
+    )
+
+    # either ping the host, or test a specific port
+    if ([string]::IsNullOrWhiteSpace($Port)) {
+        Write-Host "=> Testing $($Hostname)>" -NoNewline
+        $result = Test-NetConnection -ComputerName $IP -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    }
+    else {
+        Write-Host "=> Testing $($Hostname):$($Port)>" -NoNewline
+        $result = Test-NetConnection -ComputerName $IP -Port $Port -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    }
+
+    # was the test successful or a failure?
+    if ($null -eq $result -or (!$result.PingSucceeded -and !$result.TcpTestSucceeded)) {
+        Write-Host "`tFailed" -ForegroundColor Red
+    }
+    else {
+        Write-Host "`tSuccess" -ForegroundColor Green
     }
 }
 
