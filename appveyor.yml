@@ -1,0 +1,18 @@
+version: 0.1.{build}
+image: Visual Studio 2017
+
+branches:
+  except:
+    - gh-pages
+
+skip_tags: true
+
+configuration: Release
+
+install:
+  - ps: Install-Module -Name InvokeBuild -RequiredVersion '5.4.1' -Force
+
+build: off
+
+test_script:
+  - ps: Invoke-Build Test

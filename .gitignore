@@ -1,2 +1,8 @@
+# MISC
 *.bak
 *.hosts
+
+# NUNIT
+*.VisualState.xml
+TestResult.xml
+TestResults.xml

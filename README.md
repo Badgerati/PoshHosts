@@ -1,10 +1,19 @@
 # Hosts
 
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/Badgerati/PoshHosts/master/LICENSE.txt)
+
 Module that introduces a new `hosts` command on your terminal, that allows you to control the hosts file from the command line - on Windows, Linux and MacOS.
 
 The `hosts` commands allows you to add/remove entries; as well enable/disable them. It also supports profiles, so you can have a developer hosts file in your repo and import/merge it for developers.
 
 The `hosts` command also lets you test entries by pinging them, either using the normal ping or by passing specific ports.
+
+## Features
+
+* Control the hosts file from the command line
+* Support for host profiles, useful for local environments
+* Test entries in a hosts file by pinging them - even with specific ports
+* Display a diff between two host files
 
 ## Install
 
