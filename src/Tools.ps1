@@ -15,13 +15,13 @@ function Invoke-HostsAction
 
         [Parameter()]
         [string]
-        $HostsPath
+        $Environment
     )
 
     switch ($Action.ToLowerInvariant())
     {
         'add' {
-            Add-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2
+            Add-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environment
         }
 
         'backup' {
@@ -33,7 +33,7 @@ function Invoke-HostsAction
         }
 
         'disable' {
-            Disable-HostsFileEntries -Values $Value1
+            Disable-HostsFileEntries -Values $Value1 -Environment $Environment
         }
 
         'diff' {
@@ -41,7 +41,7 @@ function Invoke-HostsAction
         }
 
         'enable' {
-            Enable-HostsFileEntries -Values $Value1
+            Enable-HostsFileEntries -Values $Value1 -Environment $Environment
         }
 
         'export' {
@@ -53,7 +53,7 @@ function Invoke-HostsAction
         }
 
         'list' {
-            Get-HostsFile -Values $Value1 -State All
+            Get-HostsFile -Values $Value1 -Environment $Environment -State All
         }
 
         'merge' {
@@ -65,7 +65,7 @@ function Invoke-HostsAction
         }
 
         'remove' {
-            Remove-HostsFileEntries -Values $Value1
+            Remove-HostsFileEntries -Values $Value1 -Environment $Environment
         }
 
         'restore' {
@@ -73,11 +73,11 @@ function Invoke-HostsAction
         }
 
         'set' {
-            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2
+            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environemnt
         }
 
         'test' {
-            Test-HostsFileEntries -Values $Value1 -Ports $Value2
+            Test-HostsFileEntries -Values $Value1 -Ports $Value2 -Environment $Environment
         }
     }
 }
@@ -164,23 +164,27 @@ function Remove-HostsFileEntries
     param (
         [Parameter()]
         [string[]]
-        $Values
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     $info = @(ConvertFrom-HostsFile)
 
-    $Values | ForEach-Object {
+    @(Set-DefaultValueAll -Values $Values) | ForEach-Object {
         $_value = $_
-        $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -State Enabled -Like)
+        $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Environment $Environment -Hostname $_value -State All -Like)
 
         if (($_entries | Measure-Object).Count -eq 0) {
-            Write-Host "=> Already removed: [$($_value)]" -ForegroundColor Cyan
+            Write-Host "=> Already removed: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
         }
         else {
             $_entries | ForEach-Object {
                 $_entry = $_
                 @(Get-HostsFileEntryHosts -Entry $_entry -Value $_value) | ForEach-Object {
-                    $info = Remove-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_
+                    $info = Remove-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_ -Environment $Environment
                 }
             }
         }
@@ -195,18 +199,28 @@ function Enable-HostsFileEntries
     param (
         [Parameter()]
         [string[]]
-        $Values
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     $info = @(ConvertFrom-HostsFile)
 
-    $Values | ForEach-Object {
+    @(Set-DefaultValueAll -Values $Values) | ForEach-Object {
         $_value = $_
+        $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -Environment $Environment -State Disabled -Like)
 
-        @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -State Disabled -Like) | ForEach-Object {
-            $_entry = $_
-            @(Get-HostsFileEntryHosts -Entry $_entry -Value $_value) | ForEach-Object {
-                $info = Add-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_
+        if (($_entries | Measure-Object).Count -eq 0) {
+            Write-Host "=> Already enabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
+        }
+        else {
+            $_entries | ForEach-Object {
+                $_entry = $_
+                @(Get-HostsFileEntryHosts -Entry $_entry -Value $_value) | ForEach-Object {
+                    $info = Add-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_ -Environment $Environment
+                }
             }
         }
     }
@@ -220,18 +234,28 @@ function Disable-HostsFileEntries
     param (
         [Parameter()]
         [string[]]
-        $Values
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     $info = @(ConvertFrom-HostsFile)
 
-    $Values | ForEach-Object {
+    @(Set-DefaultValueAll -Values $Values) | ForEach-Object {
         $_value = $_
+        $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -Environment $Environment -State Enabled -Like)
 
-        @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -State Enabled -Like) | ForEach-Object {
-            $_entry = $_
-            @(Get-HostsFileEntryHosts -Entry $_entry -Value $_value) | ForEach-Object {
-                $info = Disable-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_
+        if (($_entries | Measure-Object).Count -eq 0) {
+            Write-Host "=> Already disabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
+        }
+        else {
+            $_entries | ForEach-Object {
+                $_entry = $_
+                @(Get-HostsFileEntryHosts -Entry $_entry -Value $_value) | ForEach-Object {
+                    $info = Disable-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_ -Environment $Environment
+                }
             }
         }
     }
@@ -249,14 +273,18 @@ function Test-HostsFileEntries
 
         [Parameter()]
         [string[]]
-        $Ports
+        $Ports,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # do we have any ports?
     $hasPorts = (($Ports | Measure-Object).Count -gt 0)
 
     # grab all enabled entries in the hosts file for the value passed
-    @(Get-HostsFile -Values $Values -State Enabled) | ForEach-Object {
+    @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
         $_ip = $_.IP
         $_name = ($_.Hosts | Select-Object -First 1)
 
@@ -281,7 +309,11 @@ function Add-HostsFileEntries
 
         [Parameter(Mandatory=$true)]
         [string[]]
-        $Hostnames
+        $Hostnames,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # get the hosts file
@@ -289,7 +321,7 @@ function Add-HostsFileEntries
 
     # loop through each hostname and add it
     $Hostnames | ForEach-Object {
-        $info = Add-HostsFileEntry -HostsMap $info -IP $IP -Hostname $_
+        $info = Add-HostsFileEntry -HostsMap $info -IP $IP -Hostname $_ -Environment $Environment
     }
 
     # write back to hosts file
@@ -305,26 +337,31 @@ function Set-HostsFileEntries
 
         [Parameter(Mandatory=$true)]
         [string[]]
-        $Hostnames
+        $Hostnames,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # get the hosts file
     $info = @(ConvertFrom-HostsFile)
 
     # reset hosts for all the entries for the IP
-    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -State Enabled)
+    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -Environment $Environment -State Enabled)
     if (($entries | Measure-Object).Count -eq 0) {
-        $info += (Get-HostsFileEntryObject -IP $IP -Hostnames @() -Enabled $true)
+        $info += (Get-HostsFileEntryObject -IP $IP -Hostnames @() -Environment $Environment -Enabled $true)
     }
     else {
         $entries | ForEach-Object {
             $_.Hosts = @()
+            $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
         }
     }
 
     # loop through each hostname and add it
     $Hostnames | ForEach-Object {
-        $info = Add-HostsFileEntry -HostsMap $info -IP $IP -Hostname $_
+        $info = Add-HostsFileEntry -HostsMap $info -IP $IP -Hostname $_ -Environment $Environment
     }
 
     # write back to hosts file
@@ -394,10 +431,10 @@ function Merge-HostsFiles
 
                 # call either add or disable on IP+host
                 if ($_entry.Enabled) {
-                    $info = Add-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_host
+                    $info = Add-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_host -Environment $_entry.Environment
                 }
                 else {
-                    $info = Disable-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_host
+                    $info = Disable-HostsFileEntry -HostsMap $info -IP $_entry.IP -Hostname $_host -Environment $_entry.Environment
                 }
             }
         }
@@ -444,6 +481,10 @@ function Get-HostsFile
         $Values,
 
         [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
         [ValidateSet('All', 'Disabled', 'Enabled')]
         [string]
         $State
@@ -452,6 +493,10 @@ function Get-HostsFile
     $info = @(ConvertFrom-HostsFile)
     $results = @()
 
+    # filter by environment
+    $info = @(Get-HostsFileEntriesByEnvironment -HostsMap $info -Environment $Environment)
+
+    # filter by values
     if (($Values | Measure-Object).Count -eq 0) {
         $results = $info
     }
@@ -466,7 +511,7 @@ function Get-HostsFile
         }
     }
 
-    return ($results | Select-Object IP, Hosts, Enabled)
+    return ($results | Select-Object IP, Hosts, Environment, Enabled)
 }
 
 
@@ -515,6 +560,10 @@ function Get-HostsFileBackupDetails
 
     if ([string]::IsNullOrWhiteSpace($BackupPath)) {
         $basepath = Split-Path -Parent -Path $path
+        if ([string]::IsNullOrWhiteSpace($basepath)) {
+            $basepath = '.'
+        }
+
         $backup = Join-Path $basepath "$(Split-Path -Leaf -Path $path).bak"
     }
     else {
@@ -532,6 +581,21 @@ function Get-HostsFileBackupDetails
             'Temp' = "$($backup).tmp";
         };
     }
+}
+
+function Set-DefaultValueAll
+{
+    param (
+        [Parameter()]
+        [string[]]
+        $Values
+    )
+
+    if (($Values | Measure-Object).Count -eq 0) {
+        return @('*')
+    }
+
+    return @($Values)
 }
 
 function Test-AdminUser
@@ -611,15 +675,31 @@ function ConvertFrom-HostsFile
     }
 
     $map = @()
+    $currentEnv = [string]::Empty
+
+    # if the path doesn't exist, just return
     if (!(Test-Path $Path)) {
         return $map
     }
 
+    # parse the file
     (Get-Content $Path) | ForEach-Object {
-        if ($_ -imatch "^\s*(?<enabled>[\#]{0,1})\s*$(Get-HostsIPRegex)\s+$(Get-HostsNameRegex)\s*$") {
+        # check if it's an environment start tag
+        if ($_ -imatch "^\s*\#\s*\<--\s*(?<name>[a-z0-9\-]+)\s*$") {
+            $currentEnv = $Matches['name']
+        }
+
+        # check if it's an environment end tag
+        elseif ($_ -imatch "^\s*\#\s*--\>\s*$") {
+            $currentEnv = [string]::Empty
+        }
+
+        # check if it's a host entry
+        elseif ($_ -imatch "^\s*(?<enabled>[\#]{0,1})\s*$(Get-HostsIPRegex)\s+$(Get-HostsNameRegex)\s*$") {
             $map += (Get-HostsFileEntryObject `
                 -IP ($Matches['ip']) `
                 -Hostnames @($Matches['hosts'] -isplit '\s+') `
+                -Environment $currentEnv `
                 -Enabled ([string]::IsNullOrWhiteSpace($Matches['enabled'])))
         }
     }
@@ -640,6 +720,10 @@ function Get-HostsFileEntryObject
         $Hostnames,
 
         [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
         [bool]
         $Enabled
     )
@@ -647,8 +731,39 @@ function Get-HostsFileEntryObject
     return (New-Object -TypeName psobject |
         Add-Member -MemberType NoteProperty -Name IP -Value $IP -PassThru |
         Add-Member -MemberType NoteProperty -Name Hosts $Hostnames -PassThru |
+        Add-Member -MemberType NoteProperty -Name Environment -Value (Resolve-HostsEnvironment -Environment $Environment) -PassThru |
         Add-Member -MemberType NoteProperty -Name Enabled -Value $Enabled -PassThru |
         Add-Member -MemberType NoteProperty -Name Hash -Value ([string]::Empty) -PassThru)
+}
+
+function Resolve-HostsEnvironment
+{
+    param (
+        [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
+        [string]
+        $Current
+    )
+
+    # default empty env to None
+    if ([string]::IsNullOrWhiteSpace($Environment)) {
+        $Environment = 'None'
+    }
+
+    # if no current env passed, just return the env
+    if ([string]::IsNullOrWhiteSpace($Current)) {
+        return $Environment
+    }
+
+    # if current env is not None, return current if env is also None
+    if ($Current -ine 'None' -and $Environment -ieq 'None') {
+        return $Current
+    }
+
+    return $Environment
 }
 
 function Update-HostsFileObject
@@ -661,7 +776,7 @@ function Update-HostsFileObject
     $crypto = [System.Security.Cryptography.SHA256]::Create()
 
     $HostsMap | ForEach-Object {
-        $str = "$($_.IP)|$($_.Hosts -join '|')"
+        $str = "$($_.IP)|$($_.Hosts -join '|')|$($_.Environment)"
         $_.Hash = [System.Convert]::ToBase64String($crypto.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($str)))
     }
 
@@ -676,25 +791,52 @@ function ConvertTo-HostsFile
     )
 
     $str = [string]::Empty
+    $nl = [Environment]::NewLine
 
+    # if there are no entries, then it's empty
     if (($HostsMap | Measure-Object).Count -eq 0) {
         return $str
     }
 
-    foreach ($entry in $HostsMap)
-    {
-        if ($null -eq $entry -or [string]::IsNullOrWhiteSpace($entry.IP) -or ($entry.Hosts | Measure-Object).Count -eq 0) {
-            continue
+    # get each of the environments
+    $HostsMap | Select-Object -ExpandProperty Environment | Group-Object | ForEach-Object {
+        $_env = $_.Name
+        $str += "#<-- $($_env)$($nl)"
+
+        # loop through each one, forming each entry line
+        $HostsMap | Where-Object { $_.Environment -ieq $_env } | ForEach-Object {
+            if ($null -ne $_ -and ![string]::IsNullOrWhiteSpace($_.IP) -and ($_.Hosts | Measure-Object).Count -gt 0) {
+                if (!$_.Enabled) {
+                    $str += '# '
+                }
+
+                $str += "$($_.IP)`t$($_.Hosts -join ' ')$($nl)"
+            }
         }
 
-        if (!$entry.Enabled) {
-            $str += '# '
-        }
-
-        $str += "$($entry.IP)`t$($entry.Hosts -join ' ')$([environment]::NewLine)"
+        $str += "#-->$($nl)$($nl)"
     }
 
     return $str
+}
+
+function Get-HostsFileEntriesByEnvironment
+{
+    param (
+        [Parameter()]
+        [object[]]
+        $HostsMap,
+
+        [Parameter()]
+        [string]
+        $Environment
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Environment)) {
+        return $HostsMap
+    }
+
+    return @($HostsMap | Where-Object { $_.Environment -ieq $Environment })
 }
 
 function Get-HostsFileEntry
@@ -716,8 +858,14 @@ function Get-HostsFileEntry
         [Parameter()]
         [ValidateSet('All', 'Disabled', 'Enabled')]
         [string]
-        $State
+        $State,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
+
+    $HostsMap = @(Get-HostsFileEntriesByEnvironment -HostsMap $HostsMap -Environment $Environment)
 
     switch ($Type.ToLowerInvariant())
     {
@@ -816,6 +964,25 @@ function Test-HostnameAgainstDifferentIP
     return $bound
 }
 
+function Get-IPHostString
+{
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $IP,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $Hostname,
+
+        [Parameter()]
+        [string]
+        $Environment
+    )
+
+    return "[$($IP) - $($Hostname)] {$(Resolve-HostsEnvironment -Environment $Environment)}"
+}
+
 function Remove-HostsFileEntry
 {
     param (
@@ -829,24 +996,29 @@ function Remove-HostsFileEntry
 
         [Parameter(Mandatory=$true)]
         [string]
-        $Hostname
+        $Hostname,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
-    # get enable entries
-    $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Enabled)
+    # get entries
+    $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State All)
 
     # skip if already removed
     if (($entries | Measure-Object).Count -eq 0) {
-        Write-Host "=> Already removed [$($IP) - $($Hostname)]" -ForegroundColor Cyan
+        Write-Host "=> Already removed $(Get-IPHostString $IP $Hostname $Environment)" -ForegroundColor Cyan
         return $HostsMap
     }
 
     # remove hostname from that entries
     $entries | ForEach-Object {
         $_.Hosts = @($_.Hosts | Where-Object { $_ -ine $Hostname })
+        $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
     }
 
-    Write-Host "=> Removing [$($IP) - $($Hostname)]"
+    Write-Host "=> Removing $(Get-IPHostString $IP $Hostname $entries[0].Environment)"
     return $HostsMap
 }
 
@@ -863,7 +1035,11 @@ function Disable-HostsFileEntry
 
         [Parameter(Mandatory=$true)]
         [string]
-        $Hostname
+        $Hostname,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # see if there's an enabled entry, and remove hostname from that entry
@@ -872,21 +1048,29 @@ function Disable-HostsFileEntry
     }
 
     # skip if already disabled
-    if ((Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Disabled | Measure-Object).Count -gt 0) {
-        Write-Host "=> Already disabled [$($IP) - $($Hostname)]" -ForegroundColor Cyan
+    $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Disabled)
+    if (($entries | Measure-Object).Count -gt 0) {
+        Write-Host "=> Already disabled $(Get-IPHostString $IP $Hostname $Environment)" -ForegroundColor Cyan
+
+        $entries | ForEach-Object {
+            $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
+        }
+
         return $HostsMap
     }
 
     # disable IP+Hostname
     $entry = (Get-HostsFileEntry -HostsMap $HostsMap -Value $IP -Type IP -State Disabled | Select-Object -First 1)
     if ($null -eq $entry) {
-        $HostsMap += (Get-HostsFileEntryObject -IP $IP -Hostnames @($Hostname) -Enabled $false)
+        $entry = (Get-HostsFileEntryObject -IP $IP -Hostnames @($Hostname) -Environment $Environment -Enabled $false)
+        $HostsMap += $entry
     }
     else {
         $entry.Hosts = @($entry.Hosts) + $Hostname
+        $entry.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $entry.Environment)
     }
 
-    Write-Host "=> Disabling [$($IP) - $($Hostname)]"
+    Write-Host "=> Disabling $(Get-IPHostString $IP $Hostname $entry.Environment)"
     return $HostsMap
 }
 
@@ -903,7 +1087,11 @@ function Add-HostsFileEntry
 
         [Parameter(Mandatory=$true)]
         [string]
-        $Hostname
+        $Hostname,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # is the host being added, or enabled from previously being diabled?
@@ -928,21 +1116,29 @@ function Add-HostsFileEntry
     }
 
     # skip if already added/enabled
-    if ((Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Enabled | Measure-Object).Count -gt 0) {
+    $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Enabled)
+    if (($entries | Measure-Object).Count -gt 0) {
         Write-Host "=> Already $(if ($enabling) { 'enabled' } else { 'added' }) [$($IP) - $($Hostname)]" -ForegroundColor Cyan
+
+        $entries | ForEach-Object {
+            $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
+        }
+
         return $HostsMap
     }
 
     # add IP+Hostname
     $entry = (Get-HostsFileEntry -HostsMap $HostsMap -Value $IP -Type IP -State Enabled | Select-Object -First 1)
     if ($null -eq $entry) {
-        $HostsMap += (Get-HostsFileEntryObject -IP $IP -Hostnames @($Hostname) -Enabled $true)
+        $entry = (Get-HostsFileEntryObject -IP $IP -Hostnames @($Hostname) -Environment $Environment -Enabled $true)
+        $HostsMap += $entry
     }
     else {
         $entry.Hosts = @($entry.Hosts) + $Hostname
+        $entry.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $entry.Environment)
     }
 
-    Write-Host "=> $(if ($enabling) { 'Enabling' } else { 'Adding' }) [$($IP) - $($Hostname)]"
+    Write-Host "=> $(if ($enabling) { 'Enabling' } else { 'Adding' }) $(Get-IPHostString $IP $Hostname $entry.Environment)"
     return $HostsMap
 }
 
@@ -962,6 +1158,10 @@ function Get-HostsFileEntries
         $Hostname,
 
         [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
         [ValidateSet('All', 'Disabled', 'Enabled')]
         [string]
         $State,
@@ -969,6 +1169,8 @@ function Get-HostsFileEntries
         [switch]
         $Like
     )
+
+    $HostsMap = @(Get-HostsFileEntriesByEnvironment -HostsMap $HostsMap -Environment $Environment)
 
     $HostsMap = @($HostsMap | Where-Object {
         if ($Like) {

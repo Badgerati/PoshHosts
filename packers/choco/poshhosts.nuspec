@@ -17,13 +17,14 @@ PoshHosts is a Cross-Platform module that allows you to control the hosts file f
 * Support for host profiles, useful for local environments
 * Test entries in a hosts file by pinging them - even with specific ports
 * Display a diff between two host files
+* Support for environment sections in host files
 
     </description>
     <projectUrl>https://github.com/Badgerati/PoshHosts</projectUrl>
     <packageSourceUrl>https://github.com/Badgerati/PoshHosts/tree/master/packers</packageSourceUrl>
     <docsUrl>https://github.com/Badgerati/PoshHosts</docsUrl>
     <bugTrackerUrl>https://github.com/Badgerati/PoshHosts/issues</bugTrackerUrl>
-    <tags>powershell hosts powershell-core windows unix linux cross-platform</tags>
+    <tags>powershell hosts powershell-core windows unix linux cross-platform environments</tags>
     <copyright>Copyright 2018</copyright>
     <licenseUrl>https://github.com/Badgerati/PoshHosts/blob/master/LICENSE.txt</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

@@ -41,7 +41,12 @@ function Hosts
         [Parameter()]
         [Alias('p')]
         [string]
-        $HostsPath
+        $HostsPath,
+
+        [Parameter()]
+        [Alias('e')]
+        [string]
+        $Environment
     )
 
     if (@('diff', 'list', 'path', 'test') -inotcontains $Action) {
@@ -50,7 +55,7 @@ function Hosts
 
     try {
         $Script:HostsFilePath = $HostsPath
-        Invoke-HostsAction -Action $Action -Value1 $Value1 -Value2 $Value2
+        Invoke-HostsAction -Action $Action -Value1 $Value1 -Value2 $Value2 -Environment $Environment
     }
     finally {
         $Script:HostsFilePath = [string]::Empty

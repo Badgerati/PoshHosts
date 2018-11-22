@@ -38,7 +38,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('powershell', 'hosts', 'powershell-core', 'windows', 'unix', 'linux', 'PSEdition_Core', 'cross-platform')
+            Tags = @('powershell', 'hosts', 'powershell-core', 'windows', 'unix', 'linux', 'PSEdition_Core', 'cross-platform', 'environments')
 
             # A URL to the license for this module.
             LicenseUri = 'https://raw.githubusercontent.com/Badgerati/PoshHosts/master/LICENSE.txt'
