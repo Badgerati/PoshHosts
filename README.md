@@ -1,6 +1,11 @@
 # Hosts
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/Badgerati/PoshHosts/master/LICENSE.txt)
+[![AppVeyor](https://img.shields.io/appveyor/ci/Badgerati/PoshHosts/master.svg?label=AppVeyor)](https://ci.appveyor.com/project/Badgerati/poshhosts/branch/master)
+[![Travis CI](https://img.shields.io/travis/Badgerati/PoshHosts/master.svg?label=Travis%20CI)](https://travis-ci.org/Badgerati/PoshHosts)
+
+[![Chocolatey](https://img.shields.io/chocolatey/dt/poshhosts.svg?label=Chocolatey&colorB=a1301c)](https://chocolatey.org/packages/poshhosts)
+[![PowerShell](https://img.shields.io/powershellgallery/dt/poshhosts.svg?label=PowerShell&colorB=085298)](https://www.powershellgallery.com/packages/PoshHosts)
 
 Module that introduces a new `hosts` command on your terminal, that allows you to control the hosts file from the command line - on Windows, Linux and MacOS.
 
