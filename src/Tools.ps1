@@ -45,11 +45,11 @@ function Invoke-HostsAction
         }
 
         'export' {
-            Export-HostsFile -Path (@($Value1) | Select-Object -First 1)
+            Export-HostsFile -Path (@($Value1) | Select-Object -First 1) -Values $Value2 -Environment $Environment
         }
 
         'import' {
-            Import-HostsFile -Path (@($Value1) | Select-Object -First 1)
+            Import-HostsFile -Path (@($Value1) | Select-Object -First 1) -Values $Value2 -Environment $Environment
         }
 
         'list' {
@@ -449,7 +449,15 @@ function Import-HostsFile
     param (
         [Parameter(Mandatory=$true)]
         [string]
-        $Path
+        $Path,
+
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
     # ensure the path exists
@@ -457,8 +465,16 @@ function Import-HostsFile
         throw "=> File not found: $($Path)"
     }
 
-    # copy the file ontop of the hosts file
-    Out-HostsFile -Path $Path -Message "Hosts file imported from: $($Path)"
+    # store the main hosts file path
+    $_HostsPathTmp = $Script:HostsFilePath
+
+    # get the relevant entries
+    $Script:HostsFilePath = $Path
+    $info = Get-HostsFile -Values $Values -Environment $Environment -State All
+
+    # write back to main hosts file
+    $Script:HostsFilePath = $_HostsPathTmp
+    Out-HostsFile -HostsMap $info -Message "Hosts file imported from: $($Path)"
 }
 
 function Export-HostsFile
@@ -466,11 +482,23 @@ function Export-HostsFile
     param (
         [Parameter(Mandatory=$true)]
         [string]
-        $Path
+        $Path,
+
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment
     )
 
-    Copy-Item -Path (Get-HostsFilePath) -Destination $Path -Force -ErrorAction Stop | Out-Null
-    Write-Host "=> Hosts file exported to: $($Path)" -ForegroundColor Green
+    # get the relevant entries
+    $info = Get-HostsFile -Values $Values -Environment $Environment -State All
+
+    # write to export location
+    $Script:HostsFilePath = $Path
+    Out-HostsFile -HostsMap $info -Message "Hosts file exported to: $($Path)"
 }
 
 function Get-HostsFile

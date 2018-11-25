@@ -17,6 +17,9 @@
 
     .EXAMPLE
         hosts test *.local 80, 443
+
+    .EXAMPLE
+        hosts list -e dev
 #>
 function Hosts
 {
