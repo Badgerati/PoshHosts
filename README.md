@@ -23,7 +23,15 @@ The `hosts` command also lets you test entries by pinging them, either using the
 
 ## Install
 
-Coming soon.
+You can install PoshHosts from either Chocolatey or the PowerShell Gallery:
+
+```powershell
+# chocolatey
+choco install poshhosts
+
+# powershell gallery
+Install-Module -Name PoshHosts
+```
 
 ## Commands
 
