@@ -99,9 +99,13 @@ hosts restore ./dev.hosts.bak
 
 # exports the hosts file to the specified path - useful for profiles
 hosts export ./dev.profile.hosts
+hosts export ./profile.hosts *.local
+hosts export ./qa.profile.hosts -e qa
 
 # imports a hosts profile, replacing the main hosts file
 hosts import ./dev.profile.hosts
+hosts import ./profile.hosts *.local
+hosts import ./qa.profile.hosts -e qa
 
 # merges the hosts file with host profiles (profile has precendence)
 hosts merge ./dev.profile.hosts
