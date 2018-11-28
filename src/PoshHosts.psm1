@@ -26,7 +26,7 @@ function Hosts
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateSet('add', 'backup', 'clear', 'diff', 'disable', 'enable', 'export',
-            'import', 'list', 'merge', 'path', 'remove', 'restore', 'set', 'test')]
+            'import', 'list', 'merge', 'path', 'rdp', 'remove', 'restore', 'set', 'test')]
         [Alias('a')]
         [string]
         $Action, 
@@ -49,16 +49,21 @@ function Hosts
         [Parameter()]
         [Alias('e')]
         [string]
-        $Environment
+        $Environment,
+
+        [Parameter()]
+        [Alias('c')]
+        [pscredential]
+        $Credentials
     )
 
-    if (@('diff', 'list', 'path', 'test') -inotcontains $Action) {
+    if (@('diff', 'list', 'path', 'rdp', 'test') -inotcontains $Action) {
         Test-AdminUser
     }
 
     try {
         $Script:HostsFilePath = $HostsPath
-        Invoke-HostsAction -Action $Action -Value1 $Value1 -Value2 $Value2 -Environment $Environment
+        Invoke-HostsAction -Action $Action -Value1 $Value1 -Value2 $Value2 -Environment $Environment -Credentials $Credentials
     }
     finally {
         $Script:HostsFilePath = [string]::Empty

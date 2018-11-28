@@ -15,7 +15,11 @@ function Invoke-HostsAction
 
         [Parameter()]
         [string]
-        $Environment
+        $Environment,
+
+        [Parameter()]
+        [pscredential]
+        $Credentials
     )
 
     switch ($Action.ToLowerInvariant())
@@ -62,6 +66,10 @@ function Invoke-HostsAction
 
         'path' {
             Write-Host "=> $(Get-HostsFilePath)"
+        }
+
+        'rdp' {
+            Invoke-HostsFileEntriesRdp -Values $Value1 -Environment $Environment -Credentials $Credentials
         }
 
         'remove' {
@@ -295,6 +303,58 @@ function Test-HostsFileEntries
         else {
             $Ports | ForEach-Object {
                 Test-HostsFileEntry -IP $_ip -Hostname $_name -Port $_
+            }
+        }
+    }
+}
+
+function Invoke-HostsFileEntriesRdp
+{
+    param (
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
+        [pscredential]
+        $Credentials
+    )
+
+    # assign creds if passed
+    if ($null -ne $Credentials) {
+        $_domain = $Credentials.GetNetworkCredential().Domain
+        $_username = $Credentials.GetNetworkCredential().UserName
+        $_password = $Credentials.GetNetworkCredential().Password
+
+        if (![string]::IsNullOrWhiteSpace($_domain)) {
+            $_username = "$($_domain)\$($_username)"
+        }
+    }
+
+    # grab all enabled entries in the hosts file for the value passed
+    @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
+        $_ip = $_.IP
+        $_name = ($_.Hosts | Select-Object -First 1)
+        Write-Host "=> Remoting onto $($_name)" -ForegroundColor Cyan
+
+        # just attempt to open a connection if no credentials
+        if ($null -eq $Credentials) {
+            mstsc.exe /v:$_ip
+        }
+
+        # otherwise, add credentials to cmdkey temporarily, and then connect
+        else {
+            try {
+                cmdkey.exe /generic:$_ip /user:$_username /pass:$_password | Out-Null
+                mstsc.exe /v:$_ip
+                Start-Sleep -Seconds 4
+            }
+            finally {
+                cmdkey.exe /delete:$_ip | Out-Null
             }
         }
     }

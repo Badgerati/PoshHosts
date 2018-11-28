@@ -20,6 +20,7 @@ The `hosts` command also lets you test entries by pinging them, either using the
 * Test entries in a hosts file by pinging them - even with specific ports
 * Display a diff between two host files
 * Support for environment sections in host files
+* Support for RDPing onto servers via host entries
 
 ## Install
 
@@ -35,11 +36,12 @@ Install-Module -Name PoshHosts
 
 ## Commands
 
-Format: `hosts <command> [<v1>] [<v2>] [-p <hosts-path>] [-e <environment>]`
+Format: `hosts <command> [<v1>] [<v2>] [-p <hosts-path>] [-e <environment>] [-c <pscredentials>]`
 
 * `-v1` and `-v2` supply the main data to commands: such as IP addresses, host names, paths and ports.
 * `-p` allows you to override the default main hosts file path with a custom one.
 * `-e` allows you to control specific environments, such as add an entry or remove all entries for an environment.
+* `-c` allows you to specify credentials - is only used for `rdp` currently
 
 > Actions that alter data in the hosts file will always create a `.bak` first; so if the command fails, then the hosts are restored from this `.bak`. If you mess-up and need to restore, the `.bak` is always left in place, calling `hosts restore` will solve your problems!
 
@@ -88,6 +90,11 @@ hosts test * 443
 hosts test dev.test.local 80, 443
 hosts test * -e dev
 hosts test * 80, 443 -e live
+
+# rdp onto entries
+hosts rdp 10.21.*
+hosts rdp -e test
+hosts rdp qa.test -c (Get-Credential)
 
 # creates a backup of the hosts file - can also specify custom file path
 hosts backup

@@ -18,6 +18,7 @@ PoshHosts is a Cross-Platform module that allows you to control the hosts file f
 * Test entries in a hosts file by pinging them - even with specific ports
 * Display a diff between two host files
 * Support for environment sections in host files
+* Support for RDPing onto servers via host entries
 
     </description>
     <projectUrl>https://github.com/Badgerati/PoshHosts</projectUrl>
