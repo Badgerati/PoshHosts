@@ -25,10 +25,7 @@ function Install-PoshHostsModule($path, $version)
     try
     {
         Push-Location (Join-Path $env:ChocolateyPackageFolder 'src')
-
-        Copy-Item -Path ./Tools.ps1 -Destination $path -Force | Out-Null
-        Copy-Item -Path ./PoshHosts.psm1 -Destination $path -Force | Out-Null
-        Copy-Item -Path ./PoshHosts.psd1 -Destination $path -Force | Out-Null
+        Copy-Item -Path ./* -Destination $path -Force | Out-Null
     }
     finally {
         Pop-Location
