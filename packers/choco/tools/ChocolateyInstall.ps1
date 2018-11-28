@@ -1,23 +1,51 @@
 $ErrorActionPreference = 'Stop'
 
-# Install Module
-# Determine which Program Files path to use
-if (![string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
-    $modulePath = Join-Path $env:ProgramFiles (Join-Path 'WindowsPowerShell' 'Modules')
-}
-else {
-    $modulePath = Join-Path ${env:ProgramFiles(x86)} (Join-Path 'WindowsPowerShell' 'Modules')
-}
 
-# Check to see if we need to create the Modules path
-if (!(Test-Path $modulePath))
+# create the module directory, and copy files over
+function Install-PoshHostsModule($path, $version)
 {
-    Write-Host "Creating path: $modulePath"
-    New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-    if (!$?) {
-        throw "Failed to create: $modulePath"
+    # Create PoshHosts module
+    $path = Join-Path $path 'PoshHosts'
+    if (![string]::IsNullOrWhiteSpace($version)) {
+        $path = Join-Path $path $version
+    }
+
+    if (!(Test-Path $path))
+    {
+        Write-Host "Creating PoshHosts module directory: $($path)"
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+        if (!$?) {
+            throw "Failed to create: $path"
+        }
+    }
+
+    # Copy contents to module
+    Write-Host 'Copying PoshHosts to module path'
+
+    try
+    {
+        Push-Location (Join-Path $env:ChocolateyPackageFolder 'src')
+
+        Copy-Item -Path ./Tools.ps1 -Destination $path -Force | Out-Null
+        Copy-Item -Path ./PoshHosts.psm1 -Destination $path -Force | Out-Null
+        Copy-Item -Path ./PoshHosts.psd1 -Destination $path -Force | Out-Null
+    }
+    finally {
+        Pop-Location
     }
 }
+
+
+
+# Determine which Program Files path to use
+$progFiles = [string]$env:ProgramFiles
+if (!(Test-Path $progFiles)) {
+    $progFiles = [string]${env:ProgramFiles(x86)}
+}
+
+# Install PS Module
+# Set the module path
+$modulePath = Join-Path $progFiles (Join-Path 'WindowsPowerShell' 'Modules')
 
 # Check to see if Modules path is in PSModulePaths
 $psModules = $env:PSModulePath
@@ -29,29 +57,18 @@ if (!$psModules.Contains($modulePath))
     $env:PSModulePath = $psModules
 }
 
-# Create PoshHosts module
-$hostsModulePath = Join-Path $modulePath 'PoshHosts'
-if (!(Test-Path $hostsModulePath))
-{
-    Write-Host 'Creating PoshHosts module directory'
-    New-Item -ItemType Directory -Path $hostsModulePath -Force | Out-Null
-    if (!$?) {
-        throw "Failed to create: $hostsModulePath"
-    }
+# create the module
+if ($PSVersionTable.PSVersion.Major -ge 5) {
+    Install-PoshHostsModule $modulePath '$version$'
+}
+else {
+    Install-PoshHostsModule $modulePath
 }
 
-# Copy contents to module
-Write-Host 'Copying PoshHosts to module path'
 
-try
-{
-    Push-Location (Join-Path $env:ChocolateyPackageFolder 'src')
+# Install PS-Core Module
+# Set the module path
+$modulePath = Join-Path $progFiles (Join-Path 'PowerShell' 'Modules')
 
-    New-Item -ItemType Directory -Path (Join-Path $hostsModulePath 'Tools') -Force | Out-Null
-    Copy-Item -Path ./Tools.ps1 -Destination $hostsModulePath -Force | Out-Null
-    Copy-Item -Path ./PoshHosts.psm1 -Destination $hostsModulePath -Force | Out-Null
-    Copy-Item -Path ./PoshHosts.psd1 -Destination $hostsModulePath -Force | Out-Null
-}
-finally {
-    Pop-Location
-}
+# create the module
+Install-PoshHostsModule $modulePath '$version$'

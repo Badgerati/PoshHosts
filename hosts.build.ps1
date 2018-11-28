@@ -35,6 +35,7 @@ function Invoke-Install($name, $version)
 task StampVersion {
     (Get-Content ./src/PoshHosts.psd1) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./src/PoshHosts.psd1
     (Get-Content ./packers/choco/poshhosts.nuspec) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./packers/choco/poshhosts.nuspec
+    (Get-Content ./packers/choco/tools/ChocolateyInstall.ps1) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./packers/choco/tools/ChocolateyInstall.ps1
 }
 
 # Synopsis: Generating a Checksum of the Zip
