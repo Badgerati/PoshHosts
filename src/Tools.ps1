@@ -382,14 +382,19 @@ function Restore-HostsFile
         $Path
     )
 
-    $details = Get-HostsFileBackupDetails -BackupPath $Path
+    try {
+        $details = Get-HostsFileBackupDetails -BackupPath $Path
 
-    if (!(Test-Path $details.Backup.Path)) {
-        throw "=> No $($details.Backup.Name) file found"
+        if (!(Test-Path $details.Backup.Path)) {
+            throw "=> No $($details.Backup.Name) file found"
+        }
+
+        Copy-Item -Path $details.Backup.Path -Destination $details.Hosts.Path -Force | Out-Null
+        Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
     }
-
-    Copy-Item -Path $details.Backup.Path -Destination $details.Hosts.Path -Force | Out-Null
-    Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
+    catch {
+        Write-Host "=> Failed to restore hosts files from $($details.Backup.Name)" -ForegroundColor Red
+    }
 }
 
 function Merge-HostsFiles
@@ -595,7 +600,7 @@ function Get-HostsFileBackupDetails
         $backup = Join-Path $basepath "$(Split-Path -Leaf -Path $path).bak"
     }
     else {
-        $backup = Resolve-Path -Path $BackupPath
+        $backup = $BackupPath
     }
 
     return @{
@@ -725,8 +730,8 @@ function ConvertFrom-HostsFile
         # check if it's a host entry
         elseif ($_ -imatch "^\s*(?<enabled>[\#]{0,1})\s*$(Get-HostsIPRegex)\s+$(Get-HostsNameRegex)\s*$") {
             $map += (Get-HostsFileEntryObject `
-                -IP ($Matches['ip']) `
-                -Hostnames @($Matches['hosts'] -isplit '\s+') `
+                -IP ($Matches['ip'].Trim()) `
+                -Hostnames @($Matches['hosts'].Trim() -isplit '\s+') `
                 -Environment $currentEnv `
                 -Enabled ([string]::IsNullOrWhiteSpace($Matches['enabled'])))
         }
@@ -1242,15 +1247,18 @@ function Out-HostsFile
 
     # write out to hosts file
     try {
+        $hosts_path = Get-HostsFilePath
+        New-HostsFilePath -Path (Split-Path -Parent -Path $hosts_path)
+
         if ([string]::IsNullOrWhiteSpace($Path)) {
             if (($HostsMap | Measure-Object).Count -gt 0) {
                 $Content = ConvertTo-HostsFile -HostsMap $HostsMap
             }
 
-            $Content | Out-File -FilePath (Get-HostsFilePath) -Encoding utf8 -Force -ErrorAction Stop | Out-Null
+            $Content | Out-File -FilePath $hosts_path -Encoding utf8 -Force -ErrorAction Stop | Out-Null
         }
         else {
-            Copy-Item -Path $Path -Destination (Get-HostsFilePath) -Force -ErrorAction Stop | Out-Null
+            Copy-Item -Path $Path -Destination $hosts_path -Force -ErrorAction Stop | Out-Null
         }
 
         Write-Host "=> $($Message)" -ForegroundColor Green
@@ -1258,6 +1266,19 @@ function Out-HostsFile
     catch {
         Restore-HostsFile
         throw $_.Exception
+    }
+}
+
+function New-HostsFilePath
+{
+    param (
+        [Parameter()]
+        [string]
+        $Path
+    )
+
+    if (!(Test-Path $Path)) {
+        New-Item -Path $Path -ItemType Directory -Force | Out-Null
     }
 }
 
