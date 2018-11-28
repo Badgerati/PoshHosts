@@ -34,5 +34,7 @@ PoshHosts is a Cross-Platform module that allows you to control the hosts file f
   <files>
     <file src="tools\**" target="tools" />
     <file src="..\..\src\**" target="src" />
+    <file src="..\..\LICENSE.txt" target="src/LICENSE.txt">
+    <file src=".\VERIFICATION.txt" target="src/VERIFICATION.txt">
   </files>
 </package>
