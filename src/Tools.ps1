@@ -73,7 +73,7 @@ function Invoke-HostsAction
         }
 
         'set' {
-            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environemnt
+            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environment
         }
 
         'test' {
@@ -348,7 +348,7 @@ function Set-HostsFileEntries
     $info = @(ConvertFrom-HostsFile)
 
     # reset hosts for all the entries for the IP
-    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -Environment $Environment -State Enabled)
+    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -State Enabled)
     if (($entries | Measure-Object).Count -eq 0) {
         $info += (Get-HostsFileEntryObject -IP $IP -Hostnames @() -Environment $Environment -Enabled $true)
     }
