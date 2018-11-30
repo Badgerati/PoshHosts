@@ -64,6 +64,10 @@ function Invoke-HostsAction
             Merge-HostsFiles -Paths $Value1
         }
 
+        'open' {
+            Open-HostsFile
+        }
+
         'path' {
             Write-Host "=> $(Get-HostsFilePath)"
         }
@@ -84,12 +88,29 @@ function Invoke-HostsAction
             Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environment
         }
 
+        'show' {
+            Get-Content -Path (Get-HostsFilePath) -Raw
+        }
+
         'test' {
             Test-HostsFileEntries -Values $Value1 -Ports $Value2 -Environment $Environment
         }
     }
 }
 
+
+function Open-HostsFile
+{
+    $path = Get-HostsFilePath
+    Write-Host "=> Opening $($path)" -ForegroundColor Cyan
+
+    if (Test-IsUnix) {
+        vi $path
+    }
+    else {
+        notepad.exe $path
+    }
+}
 
 function Compare-HostsFiles
 {

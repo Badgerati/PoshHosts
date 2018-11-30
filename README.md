@@ -21,6 +21,7 @@ The `hosts` command also lets you test entries by pinging them, either using the
 * Display a diff between two host files
 * Support for environment sections in host files
 * Support for RDPing onto servers via host entries
+* Ability to open the hosts file from CLI (notepad on Windows, Vi on Unix)
 
 ## Install
 
@@ -120,4 +121,10 @@ hosts merge ./dev.profile.hosts, ./qa.profile.hosts
 
 # displays the diff of the hosts file to a hosts profile
 hosts diff ./dev.profile.hosts
+
+# displays the contents of the hosts file on the command line
+hosts show
+
+# open the hosts file for editting
+hosts open
 ```

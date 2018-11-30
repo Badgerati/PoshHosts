@@ -19,6 +19,7 @@ PoshHosts is a Cross-Platform module that allows you to control the hosts file f
 * Display a diff between two host files
 * Support for environment sections in host files
 * Support for RDPing onto servers via host entries
+* Ability to open the hosts file from CLI (notepad on Windows, Vi on Unix)
 
     </description>
     <projectUrl>https://github.com/Badgerati/PoshHosts</projectUrl>

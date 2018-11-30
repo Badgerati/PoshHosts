@@ -25,8 +25,8 @@ function Hosts
 {
     param (
         [Parameter(Position=0, Mandatory=$true)]
-        [ValidateSet('add', 'backup', 'clear', 'diff', 'disable', 'enable', 'export',
-            'import', 'list', 'merge', 'path', 'rdp', 'remove', 'restore', 'set', 'test')]
+        [ValidateSet('add', 'backup', 'clear', 'diff', 'disable', 'enable', 'export', 'import',
+            'list', 'merge', 'open', 'path', 'rdp', 'remove', 'restore', 'set', 'show', 'test')]
         [Alias('a')]
         [string]
         $Action, 
@@ -57,7 +57,7 @@ function Hosts
         $Credentials
     )
 
-    if (@('diff', 'list', 'path', 'rdp', 'test') -inotcontains $Action) {
+    if (@('diff', 'list', 'path', 'rdp', 'show', 'test') -inotcontains $Action) {
         Test-AdminUser
     }
 
