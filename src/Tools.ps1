@@ -32,6 +32,10 @@ function Invoke-HostsAction
             New-HostsFileBackup -Path (@($Value1) | Select-Object -First 1) -Write
         }
 
+        'browse' {
+            Open-HostsFileEntries  -Values $Value1 -Protocol (@($Value2) | Select-Object -First 1) -Environment $Environment
+        }
+
         'clear' {
             Clear-HostsFile
         }
@@ -329,6 +333,37 @@ function Test-HostsFileEntries
     }
 }
 
+function Open-HostsFileEntries
+{
+    param (
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Protocol,
+
+        [Parameter()]
+        [string]
+        $Environment
+    )
+
+    # set a default HTTPS protocol
+    if ([string]::IsNullOrWhiteSpace($Protocol)) {
+        $Protocol = 'https'
+    }
+
+    # grab all enabled entries in the hosts file for the value passed
+    @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
+        $_name = ($_.Hosts | Select-Object -First 1)
+        $_url = "$($Protocol)://$($_name)"
+
+        Write-Host "=> Opening: $($_url)" -ForegroundColor Cyan
+        Start-Process "$($_url)"
+    }
+}
+
 function Invoke-HostsFileEntriesRdp
 {
     param (
@@ -607,8 +642,9 @@ function Get-HostsFile
     $info = @(ConvertFrom-HostsFile)
     $results = @()
 
-    # filter by environment
+    # filter by environment and state
     $info = @(Get-HostsFileEntriesByEnvironment -HostsMap $info -Environment $Environment)
+    $info = @(Get-HostsFileEntriesByState -HostsMap $info -State $State)
 
     # filter by values
     if (($Values | Measure-Object).Count -eq 0) {

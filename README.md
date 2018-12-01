@@ -97,6 +97,11 @@ hosts rdp 10.21.*
 hosts rdp -e test
 hosts rdp qa.test -c (Get-Credential)
 
+# open entries in default browser (default protocol is https)
+hosts browse *.local
+hosts browse qa.test http
+hosts browse -e live
+
 # creates a backup of the hosts file - can also specify custom file path
 hosts backup
 hosts backup ./dev.hosts.bak

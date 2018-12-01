@@ -25,7 +25,7 @@ function Hosts
 {
     param (
         [Parameter(Position=0, Mandatory=$true)]
-        [ValidateSet('add', 'backup', 'clear', 'diff', 'disable', 'enable', 'export', 'import',
+        [ValidateSet('add', 'backup', 'browse', 'clear', 'diff', 'disable', 'enable', 'export', 'import',
             'list', 'merge', 'open', 'path', 'rdp', 'remove', 'restore', 'set', 'show', 'test')]
         [Alias('a')]
         [string]
