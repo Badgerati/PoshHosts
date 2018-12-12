@@ -15,7 +15,11 @@ function Invoke-HostsAction
 
         [Parameter()]
         [string]
-        $Environment
+        $Environment,
+
+        [Parameter()]
+        [pscredential]
+        $Credentials
     )
 
     switch ($Action.ToLowerInvariant())
@@ -26,6 +30,10 @@ function Invoke-HostsAction
 
         'backup' {
             New-HostsFileBackup -Path (@($Value1) | Select-Object -First 1) -Write
+        }
+
+        'browse' {
+            Open-HostsFileEntries  -Values $Value1 -Protocol (@($Value2) | Select-Object -First 1) -Environment $Environment
         }
 
         'clear' {
@@ -60,8 +68,16 @@ function Invoke-HostsAction
             Merge-HostsFiles -Paths $Value1
         }
 
+        'open' {
+            Open-HostsFile
+        }
+
         'path' {
             Write-Host "=> $(Get-HostsFilePath)"
+        }
+
+        'rdp' {
+            Invoke-HostsFileEntriesRdp -Values $Value1 -Environment $Environment -Credentials $Credentials
         }
 
         'remove' {
@@ -73,7 +89,11 @@ function Invoke-HostsAction
         }
 
         'set' {
-            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environemnt
+            Set-HostsFileEntries -IP (@($Value1) | Select-Object -First 1) -Hostnames $Value2 -Environment $Environment
+        }
+
+        'show' {
+            Get-Content -Path (Get-HostsFilePath) -Raw
         }
 
         'test' {
@@ -82,6 +102,19 @@ function Invoke-HostsAction
     }
 }
 
+
+function Open-HostsFile
+{
+    $path = Get-HostsFilePath
+    Write-Host "=> Opening $($path)" -ForegroundColor Cyan
+
+    if (Test-IsUnix) {
+        vi $path
+    }
+    else {
+        notepad.exe $path
+    }
+}
 
 function Compare-HostsFiles
 {
@@ -300,6 +333,89 @@ function Test-HostsFileEntries
     }
 }
 
+function Open-HostsFileEntries
+{
+    param (
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Protocol,
+
+        [Parameter()]
+        [string]
+        $Environment
+    )
+
+    # set a default HTTPS protocol
+    if ([string]::IsNullOrWhiteSpace($Protocol)) {
+        $Protocol = 'https'
+    }
+
+    # grab all enabled entries in the hosts file for the value passed
+    @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
+        $_name = ($_.Hosts | Select-Object -First 1)
+        $_url = "$($Protocol)://$($_name)"
+
+        Write-Host "=> Opening: $($_url)" -ForegroundColor Cyan
+        Start-Process "$($_url)"
+    }
+}
+
+function Invoke-HostsFileEntriesRdp
+{
+    param (
+        [Parameter()]
+        [string[]]
+        $Values,
+
+        [Parameter()]
+        [string]
+        $Environment,
+
+        [Parameter()]
+        [pscredential]
+        $Credentials
+    )
+
+    # assign creds if passed
+    if ($null -ne $Credentials) {
+        $_domain = $Credentials.GetNetworkCredential().Domain
+        $_username = $Credentials.GetNetworkCredential().UserName
+        $_password = $Credentials.GetNetworkCredential().Password
+
+        if (![string]::IsNullOrWhiteSpace($_domain)) {
+            $_username = "$($_domain)\$($_username)"
+        }
+    }
+
+    # grab all enabled entries in the hosts file for the value passed
+    @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
+        $_ip = $_.IP
+        $_name = ($_.Hosts | Select-Object -First 1)
+        Write-Host "=> Remoting onto $($_name)" -ForegroundColor Cyan
+
+        # just attempt to open a connection if no credentials
+        if ($null -eq $Credentials) {
+            mstsc.exe /v:$_ip
+        }
+
+        # otherwise, add credentials to cmdkey temporarily, and then connect
+        else {
+            try {
+                cmdkey.exe /generic:$_ip /user:$_username /pass:$_password | Out-Null
+                mstsc.exe /v:$_ip
+                Start-Sleep -Seconds 4
+            }
+            finally {
+                cmdkey.exe /delete:$_ip | Out-Null
+            }
+        }
+    }
+}
+
 function Add-HostsFileEntries
 {
     param (
@@ -348,7 +464,7 @@ function Set-HostsFileEntries
     $info = @(ConvertFrom-HostsFile)
 
     # reset hosts for all the entries for the IP
-    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -Environment $Environment -State Enabled)
+    $entries = @(Get-HostsFileEntry -HostsMap $info -Value $IP -Type IP -State Enabled)
     if (($entries | Measure-Object).Count -eq 0) {
         $info += (Get-HostsFileEntryObject -IP $IP -Hostnames @() -Environment $Environment -Enabled $true)
     }
@@ -382,14 +498,19 @@ function Restore-HostsFile
         $Path
     )
 
-    $details = Get-HostsFileBackupDetails -BackupPath $Path
+    try {
+        $details = Get-HostsFileBackupDetails -BackupPath $Path
 
-    if (!(Test-Path $details.Backup.Path)) {
-        throw "=> No $($details.Backup.Name) file found"
+        if (!(Test-Path $details.Backup.Path)) {
+            throw "=> No $($details.Backup.Name) file found"
+        }
+
+        Copy-Item -Path $details.Backup.Path -Destination $details.Hosts.Path -Force | Out-Null
+        Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
     }
-
-    Copy-Item -Path $details.Backup.Path -Destination $details.Hosts.Path -Force | Out-Null
-    Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
+    catch {
+        Write-Host "=> Failed to restore hosts files from $($details.Backup.Name)" -ForegroundColor Red
+    }
 }
 
 function Merge-HostsFiles
@@ -521,8 +642,9 @@ function Get-HostsFile
     $info = @(ConvertFrom-HostsFile)
     $results = @()
 
-    # filter by environment
+    # filter by environment and state
     $info = @(Get-HostsFileEntriesByEnvironment -HostsMap $info -Environment $Environment)
+    $info = @(Get-HostsFileEntriesByState -HostsMap $info -State $State)
 
     # filter by values
     if (($Values | Measure-Object).Count -eq 0) {
@@ -595,7 +717,7 @@ function Get-HostsFileBackupDetails
         $backup = Join-Path $basepath "$(Split-Path -Leaf -Path $path).bak"
     }
     else {
-        $backup = Resolve-Path -Path $BackupPath
+        $backup = $BackupPath
     }
 
     return @{
@@ -725,8 +847,8 @@ function ConvertFrom-HostsFile
         # check if it's a host entry
         elseif ($_ -imatch "^\s*(?<enabled>[\#]{0,1})\s*$(Get-HostsIPRegex)\s+$(Get-HostsNameRegex)\s*$") {
             $map += (Get-HostsFileEntryObject `
-                -IP ($Matches['ip']) `
-                -Hostnames @($Matches['hosts'] -isplit '\s+') `
+                -IP ($Matches['ip'].Trim()) `
+                -Hostnames @($Matches['hosts'].Trim() -isplit '\s+') `
                 -Environment $currentEnv `
                 -Enabled ([string]::IsNullOrWhiteSpace($Matches['enabled'])))
         }
@@ -1242,15 +1364,18 @@ function Out-HostsFile
 
     # write out to hosts file
     try {
+        $hosts_path = Get-HostsFilePath
+        New-HostsFilePath -Path (Split-Path -Parent -Path $hosts_path)
+
         if ([string]::IsNullOrWhiteSpace($Path)) {
             if (($HostsMap | Measure-Object).Count -gt 0) {
                 $Content = ConvertTo-HostsFile -HostsMap $HostsMap
             }
 
-            $Content | Out-File -FilePath (Get-HostsFilePath) -Encoding utf8 -Force -ErrorAction Stop | Out-Null
+            $Content | Out-File -FilePath $hosts_path -Encoding utf8 -Force -ErrorAction Stop | Out-Null
         }
         else {
-            Copy-Item -Path $Path -Destination (Get-HostsFilePath) -Force -ErrorAction Stop | Out-Null
+            Copy-Item -Path $Path -Destination $hosts_path -Force -ErrorAction Stop | Out-Null
         }
 
         Write-Host "=> $($Message)" -ForegroundColor Green
@@ -1258,6 +1383,19 @@ function Out-HostsFile
     catch {
         Restore-HostsFile
         throw $_.Exception
+    }
+}
+
+function New-HostsFilePath
+{
+    param (
+        [Parameter()]
+        [string]
+        $Path
+    )
+
+    if (!(Test-Path $Path)) {
+        New-Item -Path $Path -ItemType Directory -Force | Out-Null
     }
 }
 

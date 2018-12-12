@@ -20,6 +20,8 @@ Installation will install the module for PowerShell, and PowerShell Core (if it 
 * Test entries in a hosts file by pinging them - even with specific ports
 * Display a diff between two host files
 * Support for environment sections in host files
+* Support for RDPing onto servers via host entries
+* Ability to open the hosts file from CLI (notepad on Windows, Vi on Unix)
 
     </description>
     <projectUrl>https://github.com/Badgerati/PoshHosts</projectUrl>
