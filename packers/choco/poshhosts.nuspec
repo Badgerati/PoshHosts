@@ -9,7 +9,9 @@
     <owners>Badgerati</owners>
     <summary>PoshHosts is a Cross-Platform module that allows you to control the hosts file from the Command Line</summary>
     <description>
-PoshHosts is a Cross-Platform module that allows you to control the hosts file from the Command Line
+PoshHosts is a Cross-Platform module that allows you to control the hosts file from the Command Line.
+
+Installation will install the module for PowerShell, and PowerShell Core (if it is installed).
 
 ### Features
 
@@ -35,7 +37,7 @@ PoshHosts is a Cross-Platform module that allows you to control the hosts file f
   <files>
     <file src="tools\**" target="tools" />
     <file src="..\..\src\**" target="src" />
-    <file src="..\..\LICENSE.txt" target="src/LICENSE.txt">
-    <file src=".\VERIFICATION.txt" target="src/VERIFICATION.txt">
+    <file src="..\..\LICENSE.txt" target="src/LICENSE.txt" />
+    <file src=".\VERIFICATION.txt" target="src/VERIFICATION.txt" />
   </files>
 </package>

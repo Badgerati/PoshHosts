@@ -25,10 +25,7 @@ function Install-PoshHostsModule($path, $version)
     try
     {
         Push-Location (Join-Path $env:ChocolateyPackageFolder 'src')
-
-        Copy-Item -Path ./Tools.ps1 -Destination $path -Force | Out-Null
-        Copy-Item -Path ./PoshHosts.psm1 -Destination $path -Force | Out-Null
-        Copy-Item -Path ./PoshHosts.psd1 -Destination $path -Force | Out-Null
+        Copy-Item -Path ./* -Destination $path -Force | Out-Null
     }
     finally {
         Pop-Location
@@ -39,9 +36,6 @@ function Install-PoshHostsModule($path, $version)
 
 # Determine which Program Files path to use
 $progFiles = [string]$env:ProgramFiles
-if (!(Test-Path $progFiles)) {
-    $progFiles = [string]${env:ProgramFiles(x86)}
-}
 
 # Install PS Module
 # Set the module path
@@ -67,8 +61,13 @@ else {
 
 
 # Install PS-Core Module
-# Set the module path
-$modulePath = Join-Path $progFiles (Join-Path 'PowerShell' 'Modules')
+$def = (Get-Command pwsh -ErrorAction SilentlyContinue).Definition
 
-# create the module
-Install-PoshHostsModule $modulePath '$version$'
+if (![string]::IsNullOrWhiteSpace($def))
+{
+    # Set the module path
+    $modulePath = Join-Path $progFiles (Join-Path 'PowerShell' 'Modules')
+
+    # create the module
+    Install-PoshHostsModule $modulePath '$version$'
+}
