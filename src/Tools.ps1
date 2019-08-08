@@ -1,5 +1,6 @@
 function Invoke-HostsAction
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -102,9 +103,9 @@ function Invoke-HostsAction
     }
 }
 
-
 function Open-HostsFile
 {
+    [CmdletBinding()]
     $path = Get-HostsFilePath
     Write-Host "=> Opening $($path)" -ForegroundColor Cyan
 
@@ -118,6 +119,7 @@ function Open-HostsFile
 
 function Compare-HostsFiles
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -194,6 +196,7 @@ function Compare-HostsFiles
 
 function Remove-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -229,6 +232,7 @@ function Remove-HostsFileEntries
 
 function Enable-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -264,6 +268,7 @@ function Enable-HostsFileEntries
 
 function Disable-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -299,6 +304,7 @@ function Disable-HostsFileEntries
 
 function Test-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -335,6 +341,7 @@ function Test-HostsFileEntries
 
 function Open-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -366,6 +373,7 @@ function Open-HostsFileEntries
 
 function Invoke-HostsFileEntriesRdp
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -418,6 +426,7 @@ function Invoke-HostsFileEntriesRdp
 
 function Add-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -446,6 +455,7 @@ function Add-HostsFileEntries
 
 function Set-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -486,12 +496,16 @@ function Set-HostsFileEntries
 
 function Clear-HostsFile
 {
+    [CmdletBinding()]
+    param()
+
     # empty the hosts file
     Out-HostsFile -Content ([string]::Empty) -Message 'Hosts file cleared'
 }
 
 function Restore-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -515,6 +529,7 @@ function Restore-HostsFile
 
 function Merge-HostsFiles
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string[]]
@@ -567,6 +582,7 @@ function Merge-HostsFiles
 
 function Import-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -600,6 +616,7 @@ function Import-HostsFile
 
 function Export-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -624,6 +641,7 @@ function Export-HostsFile
 
 function Get-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -667,6 +685,7 @@ function Get-HostsFile
 
 function New-HostsFileBackup
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -700,6 +719,7 @@ function New-HostsFileBackup
 
 function Get-HostsFileBackupDetails
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -735,6 +755,7 @@ function Get-HostsFileBackupDetails
 
 function Set-DefaultValueAll
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string[]]
@@ -750,6 +771,9 @@ function Set-DefaultValueAll
 
 function Test-AdminUser
 {
+    [CmdletBinding()]
+    param()
+
     # check the current platform, if it's unix then return true
     if (Test-IsUnix) {
         return
@@ -778,16 +802,25 @@ function Test-AdminUser
 
 function Get-PSVersionTable
 {
+    [CmdletBinding()]
+    param()
+
     return $PSVersionTable
 }
 
 function Test-IsUnix
 {
+    [CmdletBinding()]
+    param()
+
     return (Get-PSVersionTable).Platform -ieq 'unix'
 }
 
 function Get-HostsFilePath
 {
+    [CmdletBinding()]
+    param()
+
     # custom path
     if (![string]::IsNullOrWhiteSpace($Script:HostsFilePath)) {
         return $Script:HostsFilePath
@@ -804,16 +837,23 @@ function Get-HostsFilePath
 
 function Get-HostsIPRegex
 {
+    [CmdletBinding()]
+    param()
+
     return "(?<ip>(\[[a-z0-9\:]+\]|((\d+\.){3}\d+)|\:\:\d+))"
 }
 
 function Get-HostsNameRegex
 {
+    [CmdletBinding()]
+    param()
+
     return "(?<hosts>((([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\s*)+)"
 }
 
 function ConvertFrom-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -860,6 +900,7 @@ function ConvertFrom-HostsFile
 
 function Get-HostsFileEntryObject
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -888,6 +929,7 @@ function Get-HostsFileEntryObject
 
 function Resolve-HostsEnvironment
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -918,6 +960,7 @@ function Resolve-HostsEnvironment
 
 function Update-HostsFileObject
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         $HostsMap
@@ -935,6 +978,7 @@ function Update-HostsFileObject
 
 function ConvertTo-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         $HostsMap
@@ -947,6 +991,8 @@ function ConvertTo-HostsFile
     if (($HostsMap | Measure-Object).Count -eq 0) {
         return $str
     }
+
+    Write-Verbose $HostsMap
 
     # get each of the environments
     $HostsMap | Select-Object -ExpandProperty Environment | Group-Object | ForEach-Object {
@@ -972,6 +1018,7 @@ function ConvertTo-HostsFile
 
 function Get-HostsFileEntriesByEnvironment
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -991,6 +1038,7 @@ function Get-HostsFileEntriesByEnvironment
 
 function Get-HostsFileEntry
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1033,6 +1081,7 @@ function Get-HostsFileEntry
 
 function Get-HostsFileEntryHosts
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object]
@@ -1060,6 +1109,7 @@ function Get-HostsFileEntryHosts
 
 function Get-HostsFileEntriesByState
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1087,6 +1137,7 @@ function Get-HostsFileEntriesByState
 
 function Test-HostnameAgainstDifferentIP
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1116,6 +1167,7 @@ function Test-HostnameAgainstDifferentIP
 
 function Get-IPHostString
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]
@@ -1135,6 +1187,7 @@ function Get-IPHostString
 
 function Remove-HostsFileEntry
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1174,6 +1227,7 @@ function Remove-HostsFileEntry
 
 function Disable-HostsFileEntry
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1226,6 +1280,7 @@ function Disable-HostsFileEntry
 
 function Add-HostsFileEntry
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1294,6 +1349,7 @@ function Add-HostsFileEntry
 
 function Get-HostsFileEntries
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1336,6 +1392,7 @@ function Get-HostsFileEntries
 
 function Out-HostsFile
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [object[]]
@@ -1372,7 +1429,7 @@ function Out-HostsFile
                 $Content = ConvertTo-HostsFile -HostsMap $HostsMap
             }
 
-            $Content | Out-File -FilePath $hosts_path -Encoding utf8 -Force -ErrorAction Stop | Out-Null
+            $Content | Out-File -FilePath $hosts_path -Encoding ascii -Force -ErrorAction Stop | Out-Null
         }
         else {
             Copy-Item -Path $Path -Destination $hosts_path -Force -ErrorAction Stop | Out-Null
@@ -1388,6 +1445,7 @@ function Out-HostsFile
 
 function New-HostsFilePath
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -1401,6 +1459,7 @@ function New-HostsFilePath
 
 function Test-HostsFileEntry
 {
+    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
