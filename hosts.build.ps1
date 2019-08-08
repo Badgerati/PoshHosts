@@ -1,72 +1,6 @@
-param (
-    [string]
-    $Version = ''
-)
-
-<#
-# Helper Functions
-#>
-
-function Test-IsWindows
-{
-    $v = $PSVersionTable
-    return ($v.Platform -ilike '*win*' -or ($null -eq $v.Platform -and $v.PSEdition -ieq 'desktop'))
-}
-
-function Test-Command($cmd)
-{
-    $path = (Get-Command $cmd -ErrorAction Ignore)
-    return (![string]::IsNullOrWhiteSpace($path))
-}
-
-function Invoke-Install($name, $version)
-{
-    if (Test-Command 'choco') {
-        choco install $name --version $version -y
-    }
-}
-
-
-<#
-# Helper Tasks
-#>
-
-# Synopsis: Stamps the version onto the Module
-task StampVersion {
-    (Get-Content ./src/PoshHosts.psd1) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./src/PoshHosts.psd1
-    (Get-Content ./packers/choco/poshhosts.nuspec) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./packers/choco/poshhosts.nuspec
-    (Get-Content ./packers/choco/tools/ChocolateyInstall.ps1) | ForEach-Object { $_ -replace '\$version\$', $Version } | Set-Content ./packers/choco/tools/ChocolateyInstall.ps1
-}
-
-# Synopsis: Generating a Checksum of the Zip
-task PrintChecksum {
-    $Script:Checksum = (checksum -t sha256 $Version-Binaries.zip)
-    Write-Host "Checksum: $($Checksum)"
-}
-
-
 <#
 # Dependencies
 #>
-
-# Synopsis: Installs Chocolatey
-task ChocoDeps -If (Test-IsWindows) {
-    if (!(Test-Command 'choco')) {
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    }
-}
-
-# Synopsis: Install dependencies for packaging
-task PackDeps -If (Test-IsWindows) ChocoDeps, {
-    if (!(Test-Command 'checksum')) {
-        Invoke-Install 'checksum' '0.2.0'
-    }
-
-    if (!(Test-Command '7z')) {
-        Invoke-Install '7zip' '18.5.0.20180730'
-    }
-}
 
 # Synopsis: Install dependencies for running tests
 task TestDeps {
@@ -75,24 +9,6 @@ task TestDeps {
         Install-Module -Name Pester -Scope CurrentUser -RequiredVersion '4.4.2' -Force -SkipPublisherCheck
     }
 }
-
-
-<#
-# Packaging
-#>
-
-# Synopsis: Creates a Zip of the Module
-task 7Zip -If (Test-IsWindows) PackDeps, StampVersion, {
-    exec { & 7z -tzip a $Version-Binaries.zip ./src/* }
-}, PrintChecksum
-
-# Synopsis: Creates a Chocolately package of the Module
-task ChocoPack -If (Test-IsWindows) PackDeps, StampVersion, {
-    exec { choco pack ./packers/choco/poshhosts.nuspec }
-}
-
-# Synopsis: Package up the Module
-task Pack -If (Test-IsWindows) 7Zip, ChocoPack
 
 
 <#

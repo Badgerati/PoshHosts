@@ -11,7 +11,7 @@
     RootModule = 'PoshHosts.psm1'
 
     # Version number of this module.
-    ModuleVersion = '$version$'
+    ModuleVersion = '0.2.1'
 
     # ID used to uniquely identify this module
     GUID = 'f3aa217d-ec3d-306b-95d3-130dab0ac6af'
@@ -20,7 +20,7 @@
     Author = 'Matthew Kelly (Badgerati)'
 
     # Copyright statement for this module
-    Copyright = 'Copyright (c) 2018 Matthew Kelly (Badgerati), licensed under the MIT License.'
+    Copyright = 'Copyright (c) 2018-2019 Matthew Kelly (Badgerati), licensed under the MIT License.'
 
     # Description of the functionality provided by this module
     Description = 'PoshHosts is a Cross-Platform module that allows you to control the hosts file from the Command Line'

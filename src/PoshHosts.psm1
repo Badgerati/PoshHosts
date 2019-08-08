@@ -1,28 +1,29 @@
 <#
-    .SYNOPSIS
-        The hosts commands allows you to control the hosts file
+.SYNOPSIS
+    The hosts commands allows you to control the hosts file
 
-    .DESCRIPTION
-        The hosts commands allows you to control the hosts file, by adding/removing entries; as well enabling/disabling them.
+.DESCRIPTION
+    The hosts commands allows you to control the hosts file, by adding/removing entries; as well enabling/disabling them.
 
-        Hosts also supports profiles, so you can have a developer hosts file in your repo and import/merge it for developers.
+    Hosts also supports profiles, so you can have a developer hosts file in your repo and import/merge it for developers.
 
-        You can also test the entries by pinging them, either using the normal ping or by passing specific ports.
+    You can also test the entries by pinging them, either using the normal ping or by passing specific ports.
 
-    .EXAMPLE
-        hosts add 127.0.0.3 dev.test.local
+.EXAMPLE
+    hosts add 127.0.0.3 dev.test.local
 
-    .EXAMPLE
-        hosts export ./local.hosts
+.EXAMPLE
+    hosts export ./local.hosts
 
-    .EXAMPLE
-        hosts test *.local 80, 443
+.EXAMPLE
+    hosts test *.local 80, 443
 
-    .EXAMPLE
-        hosts list -e dev
+.EXAMPLE
+    hosts list -e dev
 #>
 function Hosts
 {
+    [CmdletBinding()]
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateSet('add', 'backup', 'browse', 'clear', 'diff', 'disable', 'enable', 'export', 'import',
