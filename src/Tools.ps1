@@ -992,8 +992,6 @@ function ConvertTo-HostsFile
         return $str
     }
 
-    Write-Verbose $HostsMap
-
     # get each of the environments
     $HostsMap | Select-Object -ExpandProperty Environment | Group-Object | ForEach-Object {
         $_env = $_.Name
