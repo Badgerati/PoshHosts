@@ -74,7 +74,7 @@ function Invoke-HostsAction
         }
 
         'path' {
-            Write-Host "=> $(Get-HostsFilePath)"
+            return (Get-HostsFilePath)
         }
 
         'rdp' {
@@ -106,8 +106,10 @@ function Invoke-HostsAction
 function Open-HostsFile
 {
     [CmdletBinding()]
+    param()
+
     $path = Get-HostsFilePath
-    Write-Host "=> Opening $($path)" -ForegroundColor Cyan
+    Write-Verbose "Opening $($path)"
 
     if (Test-IsUnix) {
         vi $path
@@ -128,7 +130,7 @@ function Compare-HostsFiles
 
     # ensure the path exists
     if (!(Test-Path $Path)) {
-        throw "=> File not found: $($Path)"
+        throw "File not found: $($Path)"
     }
 
     # get the hosts file
@@ -214,7 +216,7 @@ function Remove-HostsFileEntries
         $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Environment $Environment -Hostname $_value -State All -Like)
 
         if (($_entries | Measure-Object).Count -eq 0) {
-            Write-Host "=> Already removed: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
+            Write-Verbose "Already removed: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}"
         }
         else {
             $_entries | ForEach-Object {
@@ -250,7 +252,7 @@ function Enable-HostsFileEntries
         $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -Environment $Environment -State Disabled -Like)
 
         if (($_entries | Measure-Object).Count -eq 0) {
-            Write-Host "=> Already enabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
+            Write-Verbose "Already enabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}"
         }
         else {
             $_entries | ForEach-Object {
@@ -286,7 +288,7 @@ function Disable-HostsFileEntries
         $_entries = @(Get-HostsFileEntries -HostsMap $info -IP $_value -Hostname $_value -Environment $Environment -State Enabled -Like)
 
         if (($_entries | Measure-Object).Count -eq 0) {
-            Write-Host "=> Already disabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}" -ForegroundColor Cyan
+            Write-Verbose "Already disabled: [$($_value)] {$(Resolve-HostsEnvironment -Environment $Environment)}"
         }
         else {
             $_entries | ForEach-Object {
@@ -366,7 +368,7 @@ function Open-HostsFileEntries
         $_name = ($_.Hosts | Select-Object -First 1)
         $_url = "$($Protocol)://$($_name)"
 
-        Write-Host "=> Opening: $($_url)" -ForegroundColor Cyan
+        Write-Verbose "Opening: $($_url)"
         Start-Process "$($_url)"
     }
 }
@@ -403,7 +405,7 @@ function Invoke-HostsFileEntriesRdp
     @(Get-HostsFile -Values $Values -Environment $Environment -State Enabled) | ForEach-Object {
         $_ip = $_.IP
         $_name = ($_.Hosts | Select-Object -First 1)
-        Write-Host "=> Remoting onto $($_name)" -ForegroundColor Cyan
+        Write-Verbose "Remoting onto $($_name)"
 
         # just attempt to open a connection if no credentials
         if ($null -eq $Credentials) {
@@ -516,14 +518,14 @@ function Restore-HostsFile
         $details = Get-HostsFileBackupDetails -BackupPath $Path
 
         if (!(Test-Path $details.Backup.Path)) {
-            throw "=> No $($details.Backup.Name) file found"
+            throw "No $($details.Backup.Name) file found"
         }
 
         Copy-Item -Path $details.Backup.Path -Destination $details.Hosts.Path -Force | Out-Null
-        Write-Host "=> Restored hosts file from $($details.Backup.Name)" -ForegroundColor Green
+        Write-Verbose "Restored hosts file from $($details.Backup.Name)"
     }
     catch {
-        Write-Host "=> Failed to restore hosts files from $($details.Backup.Name)" -ForegroundColor Red
+        throw "Failed to restore hosts files from $($details.Backup.Name)"
     }
 }
 
@@ -539,7 +541,7 @@ function Merge-HostsFiles
     # ensure the paths exist
     $Paths | ForEach-Object {
         if (!(Test-Path $_)) {
-            throw "=> File not found: $($_)"
+            throw "File not found: $($_)"
         }
     }
 
@@ -599,7 +601,7 @@ function Import-HostsFile
 
     # ensure the path exists
     if (!(Test-Path $Path)) {
-        throw "=> File not found: $($Path)"
+        throw "File not found: $($Path)"
     }
 
     # store the main hosts file path
@@ -713,7 +715,7 @@ function New-HostsFileBackup
     }
 
     if ($Write) {
-        Write-Host "=> Hosts file backed up to $($details.Backup.Name)" -ForegroundColor Green
+        Write-Verbose "Hosts file backed up to $($details.Backup.Name)"
     }
 }
 
@@ -741,15 +743,15 @@ function Get-HostsFileBackupDetails
     }
 
     return @{
-        'Hosts' = @{
-            'Path' = $path;
-            'Name' = (Split-Path -Leaf -Path $path);
-        };
-        'Backup' = @{
-            'Path' = $backup;
-            'Name' = (Split-Path -Leaf -Path $backup);
-            'Temp' = "$($backup).tmp";
-        };
+        Hosts = @{
+            Path = $path
+            Name = (Split-Path -Leaf -Path $path)
+        }
+        Backup = @{
+            Path = $backup
+            Name = (Split-Path -Leaf -Path $backup)
+            Temp = "$($backup).tmp"
+        }
     }
 }
 
@@ -790,8 +792,8 @@ function Test-AdminUser
         }
     }
     catch [exception] {
-        Write-Host 'Error checking user administrator priviledges' -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Verbose 'Error checking user administrator priviledges'
+        Write-Verbose $_.Exception.Message
         $admin = $false
     }
 
@@ -1157,7 +1159,7 @@ function Test-HostnameAgainstDifferentIP
     $bound = ($null -ne $h -and $h.IP -ine $IP)
 
     if ($Throw -and $bound) {
-        throw "=> The hostname [$($Hostname)] is bound against a different IP address: [$($h.IP)]"
+        throw "The hostname [$($Hostname)] is bound against a different IP address: [$($h.IP)]"
     }
 
     return $bound
@@ -1209,7 +1211,7 @@ function Remove-HostsFileEntry
 
     # skip if already removed
     if (($entries | Measure-Object).Count -eq 0) {
-        Write-Host "=> Already removed $(Get-IPHostString $IP $Hostname $Environment)" -ForegroundColor Cyan
+        Write-Verbose "Already removed $(Get-IPHostString $IP $Hostname $Environment)"
         return $HostsMap
     }
 
@@ -1219,7 +1221,7 @@ function Remove-HostsFileEntry
         $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
     }
 
-    Write-Host "=> Removing $(Get-IPHostString $IP $Hostname $entries[0].Environment)"
+    Write-Verbose "Removing $(Get-IPHostString $IP $Hostname $entries[0].Environment)"
     return $HostsMap
 }
 
@@ -1252,7 +1254,7 @@ function Disable-HostsFileEntry
     # skip if already disabled
     $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Disabled)
     if (($entries | Measure-Object).Count -gt 0) {
-        Write-Host "=> Already disabled $(Get-IPHostString $IP $Hostname $Environment)" -ForegroundColor Cyan
+        Write-Verbose "Already disabled $(Get-IPHostString $IP $Hostname $Environment)"
 
         $entries | ForEach-Object {
             $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
@@ -1272,7 +1274,7 @@ function Disable-HostsFileEntry
         $entry.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $entry.Environment)
     }
 
-    Write-Host "=> Disabling $(Get-IPHostString $IP $Hostname $entry.Environment)"
+    Write-Verbose "Disabling $(Get-IPHostString $IP $Hostname $entry.Environment)"
     return $HostsMap
 }
 
@@ -1302,11 +1304,11 @@ function Add-HostsFileEntry
 
     # fail if the hostname or IP address are invalid
     if ($IP -inotmatch "^$(Get-HostsIPRegex)$") {
-        throw "=> The IP address [$($IP)] is invalid"
+        throw "The IP address [$($IP)] is invalid"
     }
 
     if ($Hostname -inotmatch "^$(Get-HostsNameRegex)$") {
-        throw "=> The hostname [$($Hostname)] is invalid"
+        throw "The hostname [$($Hostname)] is invalid"
     }
 
     # fail if the hostname is found against a different IP
@@ -1321,7 +1323,7 @@ function Add-HostsFileEntry
     # skip if already added/enabled
     $entries = @(Get-HostsFileEntries -HostsMap $HostsMap -IP $IP -Hostname $Hostname -State Enabled)
     if (($entries | Measure-Object).Count -gt 0) {
-        Write-Host "=> Already $(if ($enabling) { 'enabled' } else { 'added' }) [$($IP) - $($Hostname)]" -ForegroundColor Cyan
+        Write-Verbose "Already $(if ($enabling) { 'enabled' } else { 'added' }) [$($IP) - $($Hostname)]"
 
         $entries | ForEach-Object {
             $_.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $_.Environment)
@@ -1341,7 +1343,7 @@ function Add-HostsFileEntry
         $entry.Environment = (Resolve-HostsEnvironment -Environment $Environment -Current $entry.Environment)
     }
 
-    Write-Host "=> $(if ($enabling) { 'Enabling' } else { 'Adding' }) $(Get-IPHostString $IP $Hostname $entry.Environment)"
+    Write-Verbose "$(if ($enabling) { 'Enabling' } else { 'Adding' }) $(Get-IPHostString $IP $Hostname $entry.Environment)"
     return $HostsMap
 }
 
@@ -1433,7 +1435,7 @@ function Out-HostsFile
             Copy-Item -Path $Path -Destination $hosts_path -Force -ErrorAction Stop | Out-Null
         }
 
-        Write-Host "=> $($Message)" -ForegroundColor Green
+        Write-Verbose "$($Message)"
     }
     catch {
         Restore-HostsFile
@@ -1474,11 +1476,11 @@ function Test-HostsFileEntry
 
     # either ping the host, or test a specific port
     if ([string]::IsNullOrWhiteSpace($Port)) {
-        Write-Host "=> Testing $($Hostname)>" -NoNewline
+        Write-Host "Testing $($Hostname)>" -NoNewline
         $result = Test-NetConnection -ComputerName $IP -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     }
     else {
-        Write-Host "=> Testing $($Hostname):$($Port)>" -NoNewline
+        Write-Host "Testing $($Hostname):$($Port)>" -NoNewline
         $result = Test-NetConnection -ComputerName $IP -Port $Port -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     }
 

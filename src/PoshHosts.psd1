@@ -11,7 +11,7 @@
     RootModule = 'PoshHosts.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.2.1'
+    ModuleVersion = '0.2.2'
 
     # ID used to uniquely identify this module
     GUID = 'f3aa217d-ec3d-306b-95d3-130dab0ac6af'
